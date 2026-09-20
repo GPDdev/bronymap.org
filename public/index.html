@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="在保护隐私的前提下，发现同城的小马迷。">
+  <title>Bronymap · 找到附近的小马迷</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%237457c8'/%3E%3Cpath d='m32 12 5.8 12.2 13.4 1.7-9.8 9.3 2.5 13.3L32 42l-11.9 6.5 2.5-13.3-9.8-9.3 13.4-1.7z' fill='%23ffd0e2'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Bronymap 首页">
+      <span class="brand-mark" aria-hidden="true">★</span>
+      <span>Bronymap</span>
+    </a>
+    <div class="map-summary" aria-live="polite"><strong id="member-count">—</strong> 位小马迷已点亮地图</div>
+    <button class="ghost-button" id="privacy-button" type="button">隐私说明</button>
+  </header>
+
+  <main>
+    <div id="map" aria-label="小马迷位置地图"></div>
+
+    <section class="panel" aria-labelledby="panel-title">
+      <div class="panel-heading">
+        <p class="eyebrow">FIND YOUR HERD</p>
+        <h1 id="panel-title">点亮你的城市</h1>
+        <p>在地图上选择大致区域。你的原始选点不会离开浏览器。</p>
+      </div>
+
+      <form id="marker-form">
+        <div class="selection-card" id="selection-card" data-selected="false">
+          <span class="selection-dot" aria-hidden="true"></span>
+          <div>
+            <strong id="selection-title">还没有选择位置</strong>
+            <small id="selection-detail">点击地图任意位置开始</small>
+          </div>
+        </div>
+
+        <fieldset>
+          <legend>公开精度</legend>
+          <label class="radio-card">
+            <input type="radio" name="precision" value="25" checked>
+            <span><strong>城市级</strong><small>约 25 km，推荐</small></span>
+          </label>
+          <label class="radio-card">
+            <input type="radio" name="precision" value="10">
+            <span><strong>附近区域</strong><small>约 10 km，风险更高</small></span>
+          </label>
+        </fieldset>
+
+        <label class="field">
+          <span>城市或地区 <b aria-hidden="true">*</b></span>
+          <input id="city-label" name="city_label" maxlength="60" required placeholder="例如：成都 / Tokyo">
+        </label>
+
+        <div class="two-columns">
+          <label class="field">
+            <span>昵称 <em>可选</em></span>
+            <input name="display_name" maxlength="40" autocomplete="nickname" placeholder="例如：RainbowFan">
+          </label>
+          <label class="field">
+            <span>联系方式 <em>可选</em></span>
+            <input name="contact" maxlength="100" autocomplete="off" placeholder="QQ / Discord / 主页">
+          </label>
+        </div>
+
+        <label class="consent">
+          <input type="checkbox" name="consent" required>
+          <span>我理解模糊位置不能保证完全匿名，并同意公开以上信息。</span>
+        </label>
+
+        <div id="turnstile-container"></div>
+        <button class="primary-button" id="submit-button" type="submit">在地图上留下标记</button>
+        <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+      </form>
+
+      <details class="my-markers">
+        <summary>管理我在此设备添加的标记</summary>
+        <div id="my-marker-list"></div>
+      </details>
+    </section>
+  </main>
+
+  <dialog id="privacy-dialog">
+    <button class="dialog-close" id="privacy-close" type="button" aria-label="关闭">×</button>
+    <p class="eyebrow">PRIVACY FIRST</p>
+    <h2>地图保存什么？</h2>
+    <ul>
+      <li>原始选点只在你的浏览器中短暂停留。</li>
+      <li>服务器只收到约 10 km 或 25 km 的粗粒度网格。</li>
+      <li>公开标记是网格内生成的固定模糊位置。</li>
+      <li>同一网格不足 3 人时，不公开昵称和联系方式。</li>
+      <li>标记 90 天后自动失效，可用本设备保存的密钥提前删除。</li>
+    </ul>
+    <p class="privacy-warning">小城市、昵称和联系方式仍可能暴露身份。请勿填写住址、学校、单位、真实姓名或其他敏感信息。</p>
+  </dialog>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

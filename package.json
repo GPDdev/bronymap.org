@@ -1,0 +1,16 @@
+{
+  "name": "bronymap",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:local": "wrangler d1 migrations apply bronymap --local",
+    "db:remote": "wrangler d1 migrations apply bronymap --remote",
+    "check": "node --test"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
