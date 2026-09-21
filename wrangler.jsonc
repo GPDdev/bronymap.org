@@ -6,7 +6,7 @@
   "workers_dev": true,
   "routes": [
     {
-      "pattern": "bronymap.hachile.org",
+      "pattern": "api.bronymap.hachile.org",
       "custom_domain": true
     }
   ],

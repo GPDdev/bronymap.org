@@ -1,5 +1,7 @@
 const EARTH_RADIUS = 6378137;
 const STORAGE_KEY = "bronymap-owned-markers-v1";
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+const API_BASE = LOCAL_HOSTS.has(window.location.hostname) ? "" : "https://api.bronymap.hachile.org";
 
 const map = L.map("map", { minZoom: 2, maxZoom: 11, zoomControl: false }).setView([28, 15], 3);
 L.control.zoom({ position: "bottomleft" }).addTo(map);
@@ -46,7 +48,7 @@ async function initialize() {
 
 async function configureSubmissions() {
   try {
-    const response = await fetch("/api/config", { cache: "no-store" });
+    const response = await fetch(`${API_BASE}/api/config`, { cache: "no-store" });
     const config = await response.json();
     if (!config.submissionsEnabled) {
       submitButton.disabled = true;
@@ -128,7 +130,7 @@ async function submitMarker(event) {
   submitButton.disabled = true;
   setStatus("正在安全地添加标记……");
   try {
-    const response = await fetch("/api/markers", {
+    const response = await fetch(`${API_BASE}/api/markers`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload)
@@ -157,7 +159,7 @@ async function submitMarker(event) {
 
 async function loadMarkers() {
   try {
-    const response = await fetch("/api/markers", { cache: "no-store" });
+    const response = await fetch(`${API_BASE}/api/markers`, { cache: "no-store" });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "地图加载失败");
     memberCount.textContent = new Intl.NumberFormat("zh-CN").format(data.total);
@@ -234,7 +236,7 @@ function renderOwnedMarkers() {
 async function removeOwnedMarker(marker) {
   if (!window.confirm(`确定删除“${marker.cityLabel}”的标记吗？删除后无法恢复。`)) return;
   try {
-    const response = await fetch(`/api/markers/${encodeURIComponent(marker.id)}`, {
+    const response = await fetch(`${API_BASE}/api/markers/${encodeURIComponent(marker.id)}`, {
       method: "DELETE",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ delete_token: marker.deleteToken })

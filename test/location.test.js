@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cellCenter, hashText, parseCellId, pointForCell } from "../src/index.js";
+import { cellCenter, hashText, isTrustedOrigin, parseCellId, pointForCell } from "../src/index.js";
 
 test("location cells are validated and deterministic", async () => {
   assert.deepEqual(parseCellId("10:100:200"), { precisionKm: 10, x: 100, y: 200, size: 10000 });
@@ -17,4 +17,10 @@ test("location cells are validated and deterministic", async () => {
   assert.deepEqual(first, second);
   assert.notDeepEqual(first, different);
   assert.match(await hashText("delete-token"), /^[0-9a-f]{64}$/);
+});
+
+test("only the site origin may write through the public API", () => {
+  const apiUrl = new URL("https://api.bronymap.hachile.org/api/markers");
+  assert.equal(isTrustedOrigin(new Request(apiUrl, { headers: { origin: "https://bronymap.hachile.org" } }), apiUrl), true);
+  assert.equal(isTrustedOrigin(new Request(apiUrl, { headers: { origin: "https://evil.example" } }), apiUrl), false);
 });

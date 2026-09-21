@@ -3,42 +3,53 @@ const MAX_MARKERS = 5000;
 const NINETY_DAYS = 90 * 24 * 60 * 60;
 const EARTH_RADIUS = 6378137;
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
+const PRODUCTION_ORIGIN = "https://bronymap.hachile.org";
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const apiRequest = url.pathname.startsWith("/api/");
 
     try {
+      if (apiRequest && request.method === "OPTIONS") {
+        if (!isTrustedOrigin(request, url, env)) return json({ error: "来源不受信任" }, 403);
+        return withCors(new Response(null, { status: 204 }), request, url, env);
+      }
+
       if (url.pathname === "/api/config" && request.method === "GET") {
         const local = isDevelopment(env, url.hostname);
-        return json({
+        return withCors(json({
           submissionsEnabled: local || Boolean(env.JITTER_SECRET && env.TURNSTILE_SECRET && env.TURNSTILE_SITE_KEY),
           turnstileSiteKey: env.TURNSTILE_SITE_KEY || null
-        });
+        }), request, url, env);
       }
 
       if (url.pathname === "/api/markers" && request.method === "GET") {
-        return await listMarkers(env);
+        return withCors(await listMarkers(env), request, url, env);
       }
 
       if (url.pathname === "/api/markers" && request.method === "POST") {
-        return await createMarker(request, env, url);
+        return withCors(await createMarker(request, env, url), request, url, env);
       }
 
       const deleteMatch = url.pathname.match(/^\/api\/markers\/([0-9a-f-]{36})$/i);
       if (deleteMatch && request.method === "DELETE") {
-        return await deleteMarker(request, env, url, deleteMatch[1]);
+        return withCors(await deleteMarker(request, env, url, deleteMatch[1]), request, url, env);
       }
 
       if (url.pathname.startsWith("/api/")) {
-        return json({ error: "接口不存在" }, 404);
+        return withCors(json({ error: "接口不存在" }, 404), request, url, env);
       }
 
       return withSecurityHeaders(await env.ASSETS.fetch(request));
     } catch (error) {
-      if (error instanceof HttpError) return json({ error: error.message }, error.status);
+      if (error instanceof HttpError) {
+        const response = json({ error: error.message }, error.status);
+        return apiRequest ? withCors(response, request, url, env) : response;
+      }
       console.error("Bronymap request failed", error?.stack || error);
-      return json({ error: "服务暂时不可用，请稍后重试" }, 500);
+      const response = json({ error: "服务暂时不可用，请稍后重试" }, 500);
+      return apiRequest ? withCors(response, request, url, env) : response;
     }
   }
 };
@@ -96,7 +107,7 @@ async function listMarkers(env) {
 }
 
 async function createMarker(request, env, url) {
-  if (!sameOrigin(request, url)) return json({ error: "来源不受信任" }, 403);
+  if (!isTrustedOrigin(request, url, env)) return json({ error: "来源不受信任" }, 403);
   if (!isJson(request)) return json({ error: "请求格式必须是 JSON" }, 415);
 
   const local = isDevelopment(env, url.hostname);
@@ -148,7 +159,7 @@ async function createMarker(request, env, url) {
 }
 
 async function deleteMarker(request, env, url, id) {
-  if (!sameOrigin(request, url)) return json({ error: "来源不受信任" }, 403);
+  if (!isTrustedOrigin(request, url, env)) return json({ error: "来源不受信任" }, 403);
   if (!isJson(request)) return json({ error: "请求格式必须是 JSON" }, 415);
 
   const body = await readSmallJson(request);
@@ -264,9 +275,9 @@ function cleanText(value, maxLength, required) {
   return cleaned;
 }
 
-function sameOrigin(request, url) {
+export function isTrustedOrigin(request, url, env = {}) {
   const origin = request.headers.get("origin");
-  return !origin || origin === url.origin;
+  return !origin || origin === url.origin || origin === PRODUCTION_ORIGIN || isDevelopment(env, url.hostname);
 }
 
 function isJson(request) {
@@ -298,7 +309,18 @@ function withSecurityHeaders(response) {
   headers.set("referrer-policy", "strict-origin-when-cross-origin");
   headers.set("permissions-policy", "geolocation=(), camera=(), microphone=()");
   headers.set("x-frame-options", "DENY");
-  headers.set("content-security-policy", "default-src 'self'; script-src 'self' https://unpkg.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'none'; form-action 'self'");
+  headers.set("content-security-policy", "default-src 'self'; script-src 'self' https://unpkg.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self' https://api.bronymap.hachile.org https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'none'; form-action 'self'");
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
+}
+
+function withCors(response, request, url, env) {
+  const origin = request.headers.get("origin");
+  if (!origin || !isTrustedOrigin(request, url, env)) return response;
+  const headers = new Headers(response.headers);
+  headers.set("access-control-allow-origin", origin);
+  headers.set("access-control-allow-methods", "GET, POST, DELETE, OPTIONS");
+  headers.set("access-control-allow-headers", "content-type");
+  headers.append("vary", "Origin");
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 

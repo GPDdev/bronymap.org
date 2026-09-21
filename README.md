@@ -2,6 +2,8 @@
 
 一个隐私优先的小马迷地图。浏览器会先把选点压缩成 10 km 或 25 km 网格，服务器不会收到或保存原始坐标。
 
+静态前端由 GitHub Pages 托管在 `bronymap.hachile.org`，API 与 D1 由 Cloudflare Worker 托管在 `api.bronymap.hachile.org`。
+
 ## 本地运行
 
 需要 Node.js 18 或更高版本。
@@ -15,7 +17,20 @@ npm run dev
 
 打开 Wrangler 输出的本地地址。`.dev.vars` 会显式开启本地免验证模式，而且已被 Git 忽略，不会成为生产环境变量；本地仍使用 D1。
 
-## 首次部署
+## GitHub Pages
+
+推送到 `main` 后，`.github/workflows/pages.yml` 会把 `public` 目录发布到 GitHub Pages。仓库 Pages 设置使用 GitHub Actions，并把自定义域名设为 `bronymap.hachile.org`。
+
+Cloudflare DNS 需要添加一条 DNS-only（灰云）记录：
+
+```text
+类型: CNAME
+名称: bronymap
+目标: gpddev.github.io
+代理: DNS only
+```
+
+## 首次部署 API
 
 1. 登录 Cloudflare：
 
@@ -47,7 +62,7 @@ npm run dev
    npm run deploy
    ```
 
-`wrangler.jsonc` 已把 `bronymap.hachile.org` 配置为 Worker Custom Domain。部署时 Cloudflare 会创建相应 DNS 记录；如果已有同名记录，需要先在 Cloudflare 控制台处理冲突。
+`wrangler.jsonc` 已把 `api.bronymap.hachile.org` 配置为 Worker Custom Domain，部署时 Cloudflare 会自动创建 API 的 DNS 记录和证书。
 
 ## 隐私边界
 
