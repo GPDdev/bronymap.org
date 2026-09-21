@@ -20,7 +20,7 @@ test("location cells are validated and deterministic", async () => {
 });
 
 test("only the site origin may write through the public API", () => {
-  const apiUrl = new URL("https://api.bronymap.hachile.org/api/markers");
+  const apiUrl = new URL("https://bronymap-api.hachile.org/api/markers");
   assert.equal(isTrustedOrigin(new Request(apiUrl, { headers: { origin: "https://bronymap.hachile.org" } }), apiUrl), true);
   assert.equal(isTrustedOrigin(new Request(apiUrl, { headers: { origin: "https://evil.example" } }), apiUrl), false);
 });

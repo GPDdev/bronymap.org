@@ -6,7 +6,7 @@
   "workers_dev": true,
   "routes": [
     {
-      "pattern": "api.bronymap.hachile.org",
+      "pattern": "bronymap-api.hachile.org",
       "custom_domain": true
     }
   ],
@@ -19,11 +19,11 @@
     {
       "binding": "DB",
       "database_name": "bronymap",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "78bb6e02-2e0c-4c7d-a1cd-b0a0ee29ad72",
       "migrations_dir": "migrations"
     }
   ],
   "vars": {
-    "TURNSTILE_SITE_KEY": ""
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAE-55hBWYu7oDxqw"
   }
 }

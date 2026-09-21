@@ -1,7 +1,7 @@
 const EARTH_RADIUS = 6378137;
 const STORAGE_KEY = "bronymap-owned-markers-v1";
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
-const API_BASE = LOCAL_HOSTS.has(window.location.hostname) ? "" : "https://api.bronymap.hachile.org";
+const API_BASE = LOCAL_HOSTS.has(window.location.hostname) ? "" : "https://bronymap-api.hachile.org";
 
 const map = L.map("map", { minZoom: 2, maxZoom: 11, zoomControl: false }).setView([28, 15], 3);
 L.control.zoom({ position: "bottomleft" }).addTo(map);

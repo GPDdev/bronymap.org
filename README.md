@@ -2,7 +2,7 @@
 
 一个隐私优先的小马迷地图。浏览器会先把选点压缩成 10 km 或 25 km 网格，服务器不会收到或保存原始坐标。
 
-静态前端由 GitHub Pages 托管在 `bronymap.hachile.org`，API 与 D1 由 Cloudflare Worker 托管在 `api.bronymap.hachile.org`。
+静态前端由 GitHub Pages 托管在 `bronymap.hachile.org`，API 与 D1 由 Cloudflare Worker 托管在 `bronymap-api.hachile.org`。
 
 ## 本地运行
 
@@ -62,7 +62,7 @@ Cloudflare DNS 需要添加一条 DNS-only（灰云）记录：
    npm run deploy
    ```
 
-`wrangler.jsonc` 已把 `api.bronymap.hachile.org` 配置为 Worker Custom Domain，部署时 Cloudflare 会自动创建 API 的 DNS 记录和证书。
+`wrangler.jsonc` 已把 `bronymap-api.hachile.org` 配置为 Worker Custom Domain，部署时 Cloudflare 会自动创建 API 的 DNS 记录和证书。
 
 ## 隐私边界
 

@@ -309,7 +309,7 @@ function withSecurityHeaders(response) {
   headers.set("referrer-policy", "strict-origin-when-cross-origin");
   headers.set("permissions-policy", "geolocation=(), camera=(), microphone=()");
   headers.set("x-frame-options", "DENY");
-  headers.set("content-security-policy", "default-src 'self'; script-src 'self' https://unpkg.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self' https://api.bronymap.hachile.org https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'none'; form-action 'self'");
+  headers.set("content-security-policy", "default-src 'self'; script-src 'self' https://unpkg.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self' https://bronymap-api.hachile.org https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'none'; form-action 'self'");
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
