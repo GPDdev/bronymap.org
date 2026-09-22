@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="在保护隐私的前提下，发现同城的小马迷。">
+  <meta id="meta-description" name="description" content="在保护隐私的前提下，发现同城的小马迷。">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://unpkg.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://unpkg.com; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self' https://bronymap-api.hachile.org https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'none'; form-action 'self'">
   <title>Bronymap · 找到附近的小马迷</title>
@@ -14,92 +14,95 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/" aria-label="Bronymap 首页">
+    <a class="brand" href="/" aria-label="Bronymap 首页" data-i18n-aria="brandLabel">
       <span class="brand-mark" aria-hidden="true">★</span>
       <span>Bronymap</span>
     </a>
-    <div class="map-summary" aria-live="polite"><strong id="member-count">—</strong> 位小马迷已点亮地图</div>
-    <button class="ghost-button" id="privacy-button" type="button">隐私说明</button>
+    <div class="map-summary" aria-live="polite"><strong id="member-count">—</strong> <span data-i18n="summarySuffix">位小马迷已点亮地图</span></div>
+    <button class="ghost-button" id="privacy-button" type="button" data-i18n="privacyButton">隐私说明</button>
+    <button class="ghost-button" id="language-button" type="button">English</button>
   </header>
 
   <main>
-    <div id="map" aria-label="小马迷位置地图"></div>
+    <div id="map" aria-label="小马迷位置地图" data-i18n-aria="mapLabel"></div>
 
     <section class="panel" aria-labelledby="panel-title">
       <div class="panel-heading">
         <p class="eyebrow">FIND YOUR HERD</p>
-        <h1 id="panel-title">点亮你的城市</h1>
-        <p>在地图上选择大致区域，留下昵称和联系方式。你的原始选点不会离开浏览器。</p>
+        <h1 id="panel-title" data-i18n="panelTitle">点亮你的城市</h1>
+        <p data-i18n="panelIntro">在地图上选择大致区域，留下昵称和联系方式。你的原始选点不会离开浏览器。</p>
       </div>
 
       <form id="marker-form">
         <div class="selection-card" id="selection-card" data-selected="false">
           <span class="selection-dot" aria-hidden="true"></span>
           <div>
-            <strong id="selection-title">还没有选择位置</strong>
-            <small id="selection-detail">点击地图任意位置开始</small>
+            <strong id="selection-title" data-i18n="selectionNoneTitle">还没有选择位置</strong>
+            <small id="selection-detail" data-i18n="selectionNoneDetail">点击地图任意位置开始</small>
           </div>
         </div>
 
         <fieldset>
-          <legend>公开精度</legend>
+          <legend data-i18n="precision">公开精度</legend>
           <label class="radio-card">
             <input type="radio" name="precision" value="25" checked>
-            <span><strong>城市级</strong><small>约 25 km，推荐</small></span>
+            <span><strong data-i18n="cityLevel">城市级</strong><small data-i18n="cityLevelDetail">约 25 km，推荐</small></span>
           </label>
           <label class="radio-card">
             <input type="radio" name="precision" value="10">
-            <span><strong>附近区域</strong><small>约 10 km，风险更高</small></span>
+            <span><strong data-i18n="nearbyLevel">附近区域</strong><small data-i18n="nearbyLevelDetail">约 10 km，风险更高</small></span>
           </label>
         </fieldset>
 
         <label class="field">
-          <span>城市或地区 <b aria-hidden="true">*</b></span>
-          <input id="city-label" name="city_label" maxlength="60" required placeholder="例如：成都 / Tokyo">
+          <span><span data-i18n="cityLabel">城市或地区</span> <b aria-hidden="true">*</b></span>
+          <input id="city-label" name="city_label" maxlength="60" required placeholder="例如：成都 / Tokyo" data-i18n-placeholder="cityPlaceholder">
         </label>
 
         <div class="two-columns">
           <label class="field">
-            <span>昵称 <b aria-hidden="true">*</b></span>
-            <input name="display_name" maxlength="40" autocomplete="nickname" required placeholder="例如：RainbowFan">
+            <span><span data-i18n="nickname">昵称</span> <b aria-hidden="true">*</b></span>
+            <input name="display_name" maxlength="40" autocomplete="nickname" required placeholder="例如：RainbowFan" data-i18n-placeholder="nicknamePlaceholder">
           </label>
           <label class="field">
-            <span>联系方式 <b aria-hidden="true">*</b></span>
-            <input name="contact" maxlength="100" autocomplete="off" required placeholder="QQ / Discord / 主页">
+            <span><span data-i18n="contact">联系方式</span> <b aria-hidden="true">*</b></span>
+            <input name="contact" maxlength="100" autocomplete="off" required placeholder="QQ / Discord / 主页" data-i18n-placeholder="contactPlaceholder">
           </label>
         </div>
 
         <label class="consent">
           <input type="checkbox" name="consent" required>
-          <span>我理解模糊位置不能保证完全匿名，并同意公开昵称、联系方式和模糊位置。</span>
+          <span data-i18n="consent">我理解模糊位置不能保证完全匿名，并同意公开昵称、联系方式和模糊位置。</span>
         </label>
 
         <div id="turnstile-container"></div>
-        <button class="primary-button" id="submit-button" type="submit">在地图上留下标记</button>
+        <button class="primary-button" id="submit-button" type="submit" data-i18n="submit">在地图上留下标记</button>
         <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
       </form>
 
       <details class="my-markers">
-        <summary>管理我在此设备添加的标记</summary>
+        <summary data-i18n="manageMarkers">管理我在此设备添加的标记</summary>
         <div id="my-marker-list"></div>
       </details>
     </section>
   </main>
 
   <dialog id="privacy-dialog">
-    <button class="dialog-close" id="privacy-close" type="button" aria-label="关闭">×</button>
+    <button class="dialog-close" id="privacy-close" type="button" aria-label="关闭" data-i18n-aria="close">×</button>
     <p class="eyebrow">PRIVACY FIRST</p>
-    <h2>地图保存什么？</h2>
+    <h2 data-i18n="privacyTitle">地图保存什么？</h2>
     <ul>
-      <li>原始选点只在你的浏览器中短暂停留。</li>
-      <li>服务器只收到约 10 km 或 25 km 的粗粒度网格。</li>
-      <li>公开标记是网格内生成的固定模糊位置。</li>
-      <li>每个标记都会公开昵称、联系方式和模糊后的位置。</li>
-      <li>升级前创建的标记继续匿名显示，不会追溯公开资料。</li>
-      <li>标记 90 天后自动失效，可用本设备保存的密钥提前删除。</li>
+      <li data-i18n="privacy1">原始选点只在你的浏览器中短暂停留。</li>
+      <li data-i18n="privacy2">服务器只收到约 10 km 或 25 km 的粗粒度网格。</li>
+      <li data-i18n="privacy3">公开标记是网格内生成的固定模糊位置。</li>
+      <li data-i18n="privacy4">每个标记都会公开昵称、联系方式和模糊后的位置。</li>
+      <li data-i18n="privacy5">升级前创建的标记继续匿名显示，不会追溯公开资料。</li>
+      <li data-i18n="privacy6">标记 90 天后自动失效，可用本设备保存的密钥提前删除。</li>
     </ul>
-    <p class="privacy-warning">小城市、昵称和联系方式仍可能暴露身份。请勿填写住址、学校、单位、真实姓名或其他敏感信息。</p>
+    <p class="privacy-warning" data-i18n="privacyWarning">小城市、昵称和联系方式仍可能暴露身份。请勿填写住址、学校、单位、真实姓名或其他敏感信息。</p>
   </dialog>
+
+  <a class="site-credit" href="https://github.com/GPDdev" target="_blank" rel="noopener noreferrer">Powered by GPDdev</a>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script type="module" src="/app.js"></script>

@@ -1,5 +1,8 @@
+import { normalizeLanguage, translate } from "./i18n.js";
+
 const EARTH_RADIUS = 6378137;
 const STORAGE_KEY = "bronymap-owned-markers-v1";
+const LANGUAGE_KEY = "bronymap-language";
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 const API_BASE = LOCAL_HOSTS.has(window.location.hostname) ? "" : "https://bronymap-api.hachile.org";
 
@@ -21,10 +24,17 @@ const selectionDetail = document.querySelector("#selection-detail");
 const memberCount = document.querySelector("#member-count");
 const myMarkerList = document.querySelector("#my-marker-list");
 const privacyDialog = document.querySelector("#privacy-dialog");
+const languageButton = document.querySelector("#language-button");
+const metaDescription = document.querySelector("#meta-description");
 
 let selectedLatLng = null;
 let turnstileToken = null;
 let turnstileWidgetId = null;
+let turnstileSiteKey = null;
+let language = normalizeLanguage(localStorage.getItem(LANGUAGE_KEY));
+let visibleMarkers = [];
+let markerTotal = 0;
+let statusState = null;
 
 map.on("click", event => {
   selectedLatLng = event.latlng;
@@ -35,10 +45,12 @@ form.elements.precision.forEach(input => input.addEventListener("change", drawSe
 form.addEventListener("submit", submitMarker);
 document.querySelector("#privacy-button").addEventListener("click", () => privacyDialog.showModal());
 document.querySelector("#privacy-close").addEventListener("click", () => privacyDialog.close());
+languageButton.addEventListener("click", () => applyLanguage(language === "zh" ? "en" : "zh"));
 privacyDialog.addEventListener("click", event => {
   if (event.target === privacyDialog) privacyDialog.close();
 });
 
+applyLanguage(language);
 void initialize();
 
 async function initialize() {
@@ -52,31 +64,37 @@ async function configureSubmissions() {
     const config = await response.json();
     if (!config.submissionsEnabled) {
       submitButton.disabled = true;
-      setStatus("公开提交尚未配置完成，目前只能浏览地图。", "error");
+      setStatus("submissionsDisabled", "error");
       return;
     }
     if (config.turnstileSiteKey) loadTurnstile(config.turnstileSiteKey);
   } catch {
     submitButton.disabled = true;
-    setStatus("无法读取站点配置。", "error");
+    setStatus("configFailed", "error");
   }
 }
 
 function loadTurnstile(siteKey) {
-  window.onTurnstileReady = () => {
-    turnstileWidgetId = window.turnstile.render("#turnstile-container", {
-      sitekey: siteKey,
-      theme: "light",
-      size: "flexible",
-      callback: token => { turnstileToken = token; },
-      "expired-callback": () => { turnstileToken = null; }
-    });
-  };
+  turnstileSiteKey = siteKey;
+  window.onTurnstileReady = renderTurnstile;
   const script = document.createElement("script");
   script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileReady&render=explicit";
   script.async = true;
   script.defer = true;
   document.head.append(script);
+}
+
+function renderTurnstile() {
+  turnstileToken = null;
+  if (turnstileWidgetId !== null) window.turnstile.remove(turnstileWidgetId);
+  turnstileWidgetId = window.turnstile.render("#turnstile-container", {
+    sitekey: turnstileSiteKey,
+    theme: "light",
+    size: "flexible",
+    language: language === "en" ? "en" : "zh-CN",
+    callback: token => { turnstileToken = token; },
+    "expired-callback": () => { turnstileToken = null; }
+  });
 }
 
 function drawSelection() {
@@ -105,14 +123,14 @@ function drawSelection() {
   }).addTo(selectionLayer);
 
   selectionCard.dataset.selected = "true";
-  selectionTitle.textContent = "已选择模糊区域";
-  selectionDetail.textContent = `提交前会压缩到约 ${precisionKm} km 网格`;
+  selectionTitle.textContent = t("selectionSelectedTitle");
+  selectionDetail.textContent = t("selectionSelectedDetail", { km: precisionKm });
 }
 
 async function submitMarker(event) {
   event.preventDefault();
   if (!selectedLatLng) {
-    setStatus("请先在地图上点选一个大致位置。", "error");
+    setStatus("chooseLocation", "error");
     return;
   }
 
@@ -129,7 +147,7 @@ async function submitMarker(event) {
   };
 
   submitButton.disabled = true;
-  setStatus("正在安全地添加标记……");
+  setStatus("submitting");
   try {
     const response = await fetch(`${API_BASE}/api/markers`, {
       method: "POST",
@@ -137,21 +155,21 @@ async function submitMarker(event) {
       body: JSON.stringify(payload)
     });
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "提交失败");
+    if (!response.ok) throw new Error(localizeApiError(result.error, "submitFailed"));
 
     saveOwnedMarker({ id: result.id, deleteToken, cityLabel: payload.city_label.trim() });
     form.reset();
     selectionLayer.clearLayers();
     selectedLatLng = null;
     selectionCard.dataset.selected = "false";
-    selectionTitle.textContent = "还没有选择位置";
-    selectionDetail.textContent = "点击地图任意位置开始";
-    setStatus("标记已经点亮，90 天内有效。", "success");
+    selectionTitle.textContent = t("selectionNoneTitle");
+    selectionDetail.textContent = t("selectionNoneDetail");
+    setStatus("submitted", "success");
     resetTurnstile();
     await loadMarkers();
     renderOwnedMarkers();
   } catch (error) {
-    setStatus(error.message, "error");
+    setRawStatus(error.message, "error");
     resetTurnstile();
   } finally {
     submitButton.disabled = false;
@@ -162,12 +180,15 @@ async function loadMarkers() {
   try {
     const response = await fetch(`${API_BASE}/api/markers`, { cache: "no-store" });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "地图加载失败");
-    memberCount.textContent = new Intl.NumberFormat("zh-CN").format(data.total);
-    renderMarkers(data.markers);
+    if (!response.ok) throw new Error(localizeApiError(data.error, "mapLoadFailed"));
+    markerTotal = data.total;
+    visibleMarkers = data.markers;
+    renderMemberCount();
+    renderMarkers(visibleMarkers);
   } catch {
-    memberCount.textContent = "0";
-    setStatus("暂时无法读取地图数据。", "error");
+    markerTotal = 0;
+    renderMemberCount();
+    setStatus("mapFailed", "error");
   }
 }
 
@@ -191,19 +212,19 @@ function makePopup(marker) {
   const title = document.createElement("p");
   title.className = "popup-title";
   title.textContent = marker.kind === "area"
-    ? `${marker.city_label} · ${marker.count} 位旧版匿名用户`
-    : marker.display_name || "一位小马迷";
+    ? t("legacyTitle", { city: marker.city_label, count: marker.count })
+    : marker.display_name || t("anonymousMember");
   root.append(title);
 
   const meta = document.createElement("div");
   meta.className = "popup-meta";
-  meta.textContent = `${marker.city_label} · 位置已模糊至约 ${marker.precision_km} km`;
+  meta.textContent = t("markerMeta", { city: marker.city_label, km: marker.precision_km });
   root.append(meta);
 
   if (marker.kind === "member" && marker.contact) {
     const contact = document.createElement("div");
     contact.className = "popup-contact";
-    contact.textContent = `联系方式：${marker.contact}`;
+    contact.textContent = t("contactValue", { contact: marker.contact });
     root.append(contact);
   }
   return root;
@@ -215,7 +236,7 @@ function renderOwnedMarkers() {
   if (!markers.length) {
     const empty = document.createElement("p");
     empty.className = "empty-state";
-    empty.textContent = "此设备还没有保存删除密钥。";
+    empty.textContent = t("noDeleteKeys");
     myMarkerList.append(empty);
     return;
   }
@@ -227,7 +248,7 @@ function renderOwnedMarkers() {
     label.textContent = marker.cityLabel;
     const button = document.createElement("button");
     button.type = "button";
-    button.textContent = "删除";
+    button.textContent = t("delete");
     button.addEventListener("click", () => removeOwnedMarker(marker));
     row.append(label, button);
     myMarkerList.append(row);
@@ -235,7 +256,7 @@ function renderOwnedMarkers() {
 }
 
 async function removeOwnedMarker(marker) {
-  if (!window.confirm(`确定删除“${marker.cityLabel}”的标记吗？删除后无法恢复。`)) return;
+  if (!window.confirm(t("deleteConfirm", { city: marker.cityLabel }))) return;
   try {
     const response = await fetch(`${API_BASE}/api/markers/${encodeURIComponent(marker.id)}`, {
       method: "DELETE",
@@ -243,13 +264,13 @@ async function removeOwnedMarker(marker) {
       body: JSON.stringify({ delete_token: marker.deleteToken })
     });
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "删除失败");
+    if (!response.ok) throw new Error(localizeApiError(result.error, "deleteFailed"));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(getOwnedMarkers().filter(item => item.id !== marker.id)));
     renderOwnedMarkers();
     await loadMarkers();
-    setStatus("标记已永久删除。", "success");
+    setStatus("deleted", "success");
   } catch (error) {
-    setStatus(error.message, "error");
+    setRawStatus(error.message, "error");
   }
 }
 
@@ -297,7 +318,67 @@ function resetTurnstile() {
   if (turnstileWidgetId !== null && window.turnstile) window.turnstile.reset(turnstileWidgetId);
 }
 
-function setStatus(message, tone = "") {
-  formStatus.textContent = message;
-  formStatus.dataset.tone = tone;
+function t(key, values) {
+  return translate(language, key, values);
+}
+
+function applyLanguage(nextLanguage) {
+  language = normalizeLanguage(nextLanguage);
+  localStorage.setItem(LANGUAGE_KEY, language);
+  document.documentElement.lang = language === "en" ? "en" : "zh-CN";
+  document.title = t("documentTitle");
+  metaDescription.content = t("description");
+  document.querySelectorAll("[data-i18n]").forEach(element => { element.textContent = t(element.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(element => { element.placeholder = t(element.dataset.i18nPlaceholder); });
+  document.querySelectorAll("[data-i18n-aria]").forEach(element => { element.setAttribute("aria-label", t(element.dataset.i18nAria)); });
+  languageButton.textContent = t("languageSwitch");
+  languageButton.setAttribute("aria-label", t("languageSwitch"));
+  if (selectedLatLng) drawSelection();
+  else {
+    selectionTitle.textContent = t("selectionNoneTitle");
+    selectionDetail.textContent = t("selectionNoneDetail");
+  }
+  renderMemberCount();
+  renderMarkers(visibleMarkers);
+  renderOwnedMarkers();
+  renderStatus();
+  if (turnstileSiteKey && window.turnstile) renderTurnstile();
+}
+
+function renderMemberCount() {
+  memberCount.textContent = new Intl.NumberFormat(language === "en" ? "en" : "zh-CN").format(markerTotal);
+}
+
+function setStatus(key, tone = "", values = {}) {
+  statusState = { key, tone, values };
+  renderStatus();
+}
+
+function setRawStatus(message, tone = "") {
+  statusState = { message, tone };
+  renderStatus();
+}
+
+function renderStatus() {
+  formStatus.textContent = statusState?.key ? t(statusState.key, statusState.values) : statusState?.message || "";
+  formStatus.dataset.tone = statusState?.tone || "";
+}
+
+function localizeApiError(message, fallbackKey) {
+  const key = {
+    "来源不受信任": "apiUntrusted",
+    "接口不存在": "apiMissing",
+    "服务暂时不可用，请稍后重试": "apiUnavailable",
+    "请求格式必须是 JSON": "apiJsonOnly",
+    "站点尚未完成安全配置，暂时不能提交": "apiNotReady",
+    "位置网格无效": "apiInvalidGrid",
+    "请确认公开信息授权": "apiConsent",
+    "删除密钥无效": "apiInvalidDeleteKey",
+    "人机验证失败，请重试": "apiChallenge",
+    "没有找到标记或删除密钥错误": "apiMarkerMissing",
+    "请填写城市或地区": "apiCityRequired",
+    "请填写昵称": "apiNicknameRequired",
+    "请填写联系方式": "apiContactRequired"
+  }[message];
+  return key ? t(key) : language === "en" ? t(fallbackKey) : message || t(fallbackKey);
 }

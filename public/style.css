@@ -75,6 +75,22 @@ button, input { font: inherit; }
   cursor: pointer;
 }
 
+.site-credit {
+  position: fixed;
+  z-index: 1000;
+  right: 14px;
+  bottom: 12px;
+  padding: 6px 10px;
+  color: #514a60;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(116, 87, 200, 0.18);
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(64, 42, 88, 0.14);
+  font-size: 0.72rem;
+  text-decoration: none;
+}
+.site-credit:hover { color: var(--purple); }
+
 main { height: 100%; padding-top: 64px; }
 #map { width: 100%; height: 100%; background: #dbe8ef; }
 
@@ -187,7 +203,8 @@ dialog ul { padding-left: 20px; color: var(--muted); line-height: 1.7; }
   body { overflow: auto; }
   .topbar { height: 58px; padding: 0 14px; gap: 10px; }
   .map-summary { display: none; }
-  .ghost-button { margin-left: auto; }
+  .map-summary + .ghost-button { margin-left: auto; }
+  .ghost-button { padding: 7px 10px; }
   main { height: auto; min-height: 100%; padding-top: 58px; }
   #map { height: 48vh; min-height: 330px; }
   .panel { position: relative; top: auto; right: auto; width: 100%; max-height: none; padding: 22px 18px 36px; border-radius: 20px 20px 0 0; margin-top: -20px; }
