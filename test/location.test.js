@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cellCenter, hashText, isTrustedOrigin, parseCellId, pointForCell } from "../src/index.js";
+import { cellCenter, cleanText, hashText, isTrustedOrigin, parseCellId, pointForCell } from "../src/index.js";
 
 test("location cells are validated and deterministic", async () => {
   assert.deepEqual(parseCellId("10:100:200"), { precisionKm: 10, x: 100, y: 200, size: 10000 });
@@ -23,4 +23,9 @@ test("only the site origin may write through the public API", () => {
   const apiUrl = new URL("https://bronymap-api.hachile.org/api/markers");
   assert.equal(isTrustedOrigin(new Request(apiUrl, { headers: { origin: "https://bronymap.hachile.org" } }), apiUrl), true);
   assert.equal(isTrustedOrigin(new Request(apiUrl, { headers: { origin: "https://evil.example" } }), apiUrl), false);
+});
+
+test("public profile fields are required and normalized", () => {
+  assert.equal(cleanText("  Rainbow\nFan  ", 40, "昵称"), "Rainbow Fan");
+  assert.throws(() => cleanText("  ", 100, "联系方式"), /请填写联系方式/);
 });

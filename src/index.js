@@ -59,36 +59,17 @@ async function listMarkers(env) {
   await env.DB.prepare("DELETE FROM markers WHERE expires_at <= ?1").bind(now).run();
   const { results = [] } = await env.DB.prepare(
     `SELECT id, cell_id, precision_km, public_lat, public_lng, city_label,
-            display_name, contact, created_at, expires_at
+            display_name, contact, profile_public, created_at, expires_at
        FROM markers
       WHERE status = 'active' AND expires_at > ?1
       ORDER BY created_at DESC
       LIMIT ?2`
   ).bind(now, MAX_MARKERS).all();
 
-  const cells = new Map();
-  for (const marker of results) {
-    const group = cells.get(marker.cell_id) || [];
-    group.push(marker);
-    cells.set(marker.cell_id, group);
-  }
-
   const publicMarkers = [];
-  for (const [cellId, group] of cells) {
-    if (group.length < 3) {
-      const center = cellCenter(cellId);
-      publicMarkers.push({
-        kind: "area",
-        lat: center.lat,
-        lng: center.lng,
-        precision_km: group[0].precision_km,
-        city_label: group[0].city_label,
-        count: group.length
-      });
-      continue;
-    }
-
-    for (const marker of group) {
+  const legacyCells = new Map();
+  for (const marker of results) {
+    if (marker.profile_public === 1) {
       publicMarkers.push({
         kind: "member",
         id: marker.id,
@@ -100,7 +81,23 @@ async function listMarkers(env) {
         contact: marker.contact,
         expires_at: marker.expires_at
       });
+      continue;
     }
+    const group = legacyCells.get(marker.cell_id) || [];
+    group.push(marker);
+    legacyCells.set(marker.cell_id, group);
+  }
+
+  for (const [cellId, group] of legacyCells) {
+    const center = cellCenter(cellId);
+    publicMarkers.push({
+      kind: "area",
+      lat: center.lat,
+      lng: center.lng,
+      precision_km: group[0].precision_km,
+      city_label: group[0].city_label,
+      count: group.length
+    });
   }
 
   return json({ markers: publicMarkers, total: results.length });
@@ -117,12 +114,13 @@ async function createMarker(request, env, url) {
 
   const body = await readSmallJson(request);
   const cell = parseCellId(body.cell_id);
-  const cityLabel = cleanText(body.city_label, 60, true);
-  const displayName = cleanText(body.display_name, 40, false) || null;
-  const contact = cleanText(body.contact, 100, false) || null;
+  const cityLabel = cleanText(body.city_label, 60, "城市或地区");
+  const displayName = cleanText(body.display_name, 40, "昵称");
+  const contact = cleanText(body.contact, 100, "联系方式");
   const deleteToken = typeof body.delete_token === "string" ? body.delete_token : "";
 
   if (!cell) return json({ error: "位置网格无效" }, 400);
+  if (body.profile_public !== true) return json({ error: "请确认公开信息授权" }, 400);
   if (deleteToken.length < 32 || deleteToken.length > 100) {
     return json({ error: "删除密钥无效" }, 400);
   }
@@ -139,8 +137,8 @@ async function createMarker(request, env, url) {
   await env.DB.prepare(
     `INSERT INTO markers
        (id, cell_id, precision_km, public_lat, public_lng, city_label,
-        display_name, contact, delete_hash, status, created_at, expires_at)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 'active', ?10, ?11)`
+        display_name, contact, profile_public, delete_hash, status, created_at, expires_at)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 1, ?9, 'active', ?10, ?11)`
   ).bind(
     id,
     body.cell_id,
@@ -266,12 +264,12 @@ export async function hashText(value) {
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
 }
 
-function cleanText(value, maxLength, required) {
+export function cleanText(value, maxLength, field) {
   const cleaned = typeof value === "string"
     ? value.normalize("NFKC").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim()
     : "";
-  if (required && !cleaned) throw new HttpError("请填写城市或地区", 400);
-  if (cleaned.length > maxLength) throw new HttpError(`文字不能超过 ${maxLength} 个字符`, 400);
+  if (!cleaned) throw new HttpError(`请填写${field}`, 400);
+  if (cleaned.length > maxLength) throw new HttpError(`${field}不能超过 ${maxLength} 个字符`, 400);
   return cleaned;
 }
 

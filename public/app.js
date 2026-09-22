@@ -123,6 +123,7 @@ async function submitMarker(event) {
     city_label: form.elements.city_label.value,
     display_name: form.elements.display_name.value,
     contact: form.elements.contact.value,
+    profile_public: form.elements.consent.checked,
     delete_token: deleteToken,
     turnstile_token: turnstileToken
   };
@@ -190,7 +191,7 @@ function makePopup(marker) {
   const title = document.createElement("p");
   title.className = "popup-title";
   title.textContent = marker.kind === "area"
-    ? `${marker.city_label} · ${marker.count} 位小马迷`
+    ? `${marker.city_label} · ${marker.count} 位旧版匿名用户`
     : marker.display_name || "一位小马迷";
   root.append(title);
 
@@ -202,7 +203,7 @@ function makePopup(marker) {
   if (marker.kind === "member" && marker.contact) {
     const contact = document.createElement("div");
     contact.className = "popup-contact";
-    contact.textContent = marker.contact;
+    contact.textContent = `联系方式：${marker.contact}`;
     root.append(contact);
   }
   return root;

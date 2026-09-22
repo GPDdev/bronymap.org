@@ -29,7 +29,7 @@
       <div class="panel-heading">
         <p class="eyebrow">FIND YOUR HERD</p>
         <h1 id="panel-title">点亮你的城市</h1>
-        <p>在地图上选择大致区域。你的原始选点不会离开浏览器。</p>
+        <p>在地图上选择大致区域，留下昵称和联系方式。你的原始选点不会离开浏览器。</p>
       </div>
 
       <form id="marker-form">
@@ -60,18 +60,18 @@
 
         <div class="two-columns">
           <label class="field">
-            <span>昵称 <em>可选</em></span>
-            <input name="display_name" maxlength="40" autocomplete="nickname" placeholder="例如：RainbowFan">
+            <span>昵称 <b aria-hidden="true">*</b></span>
+            <input name="display_name" maxlength="40" autocomplete="nickname" required placeholder="例如：RainbowFan">
           </label>
           <label class="field">
-            <span>联系方式 <em>可选</em></span>
-            <input name="contact" maxlength="100" autocomplete="off" placeholder="QQ / Discord / 主页">
+            <span>联系方式 <b aria-hidden="true">*</b></span>
+            <input name="contact" maxlength="100" autocomplete="off" required placeholder="QQ / Discord / 主页">
           </label>
         </div>
 
         <label class="consent">
           <input type="checkbox" name="consent" required>
-          <span>我理解模糊位置不能保证完全匿名，并同意公开以上信息。</span>
+          <span>我理解模糊位置不能保证完全匿名，并同意公开昵称、联系方式和模糊位置。</span>
         </label>
 
         <div id="turnstile-container"></div>
@@ -94,7 +94,8 @@
       <li>原始选点只在你的浏览器中短暂停留。</li>
       <li>服务器只收到约 10 km 或 25 km 的粗粒度网格。</li>
       <li>公开标记是网格内生成的固定模糊位置。</li>
-      <li>同一网格不足 3 人时，不公开昵称和联系方式。</li>
+      <li>每个标记都会公开昵称、联系方式和模糊后的位置。</li>
+      <li>升级前创建的标记继续匿名显示，不会追溯公开资料。</li>
       <li>标记 90 天后自动失效，可用本设备保存的密钥提前删除。</li>
     </ul>
     <p class="privacy-warning">小城市、昵称和联系方式仍可能暴露身份。请勿填写住址、学校、单位、真实姓名或其他敏感信息。</p>
