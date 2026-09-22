@@ -76,10 +76,9 @@ button, input { font: inherit; }
 }
 
 .site-credit {
-  position: fixed;
-  z-index: 1000;
-  right: 14px;
-  bottom: 12px;
+  display: block;
+  width: max-content;
+  margin: 14px auto 0;
   padding: 6px 10px;
   color: #514a60;
   background: rgba(255, 255, 255, 0.9);
