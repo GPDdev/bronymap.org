@@ -1,6 +1,7 @@
 import { normalizeLanguage, translate } from "./i18n.js";
 
 const EARTH_RADIUS = 6378137;
+const MAX_LATITUDE = 85.05112878;
 const STORAGE_KEY = "bronymap-owned-markers-v1";
 const LANGUAGE_KEY = "bronymap-language";
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
@@ -290,21 +291,22 @@ function getOwnedMarkers() {
 }
 
 function toCellId(lat, lng, precisionKm) {
-  const safeLat = Math.max(-85.05112878, Math.min(85.05112878, lat));
-  const x = EARTH_RADIUS * lng * Math.PI / 180;
-  const y = EARTH_RADIUS * Math.log(Math.tan(Math.PI / 4 + safeLat * Math.PI / 360));
+  const safeLat = Math.max(-MAX_LATITUDE, Math.min(MAX_LATITUDE, lat));
   const size = precisionKm * 1000;
-  return `${precisionKm}:${Math.floor(x / size)}:${Math.floor(y / size)}`;
+  const y = Math.floor(EARTH_RADIUS * safeLat * Math.PI / 180 / size);
+  const centerLatRadians = (y + 0.5) * size / EARTH_RADIUS;
+  const x = Math.floor(EARTH_RADIUS * lng * Math.PI / 180 * Math.cos(centerLatRadians) / size);
+  return `v2:${precisionKm}:${x}:${y}`;
 }
 
 function cellCenter(cellId) {
-  const [precisionKm, cellX, cellY] = cellId.split(":").map(Number);
+  const [, precisionKm, cellX, cellY] = cellId.split(":");
   const size = precisionKm * 1000;
-  const x = (cellX + 0.5) * size;
-  const y = (cellY + 0.5) * size;
+  const latRadians = (Number(cellY) + 0.5) * size / EARTH_RADIUS;
+  const lngRadians = (Number(cellX) + 0.5) * size / (EARTH_RADIUS * Math.cos(latRadians));
   return {
-    lng: x / EARTH_RADIUS * 180 / Math.PI,
-    lat: (2 * Math.atan(Math.exp(y / EARTH_RADIUS)) - Math.PI / 2) * 180 / Math.PI
+    lng: ((lngRadians * 180 / Math.PI + 540) % 360) - 180,
+    lat: latRadians * 180 / Math.PI
   };
 }
 

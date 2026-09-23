@@ -2,6 +2,7 @@ const ALLOWED_PRECISIONS = new Set([10, 25]);
 const MAX_MARKERS = 5000;
 const NINETY_DAYS = 90 * 24 * 60 * 60;
 const EARTH_RADIUS = 6378137;
+const MAX_LATITUDE = 85.05112878;
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8" };
 const PRODUCTION_ORIGIN = "https://bronymap.hachile.org";
 
@@ -119,7 +120,7 @@ async function createMarker(request, env, url) {
   const contact = cleanText(body.contact, 100, "联系方式");
   const deleteToken = typeof body.delete_token === "string" ? body.delete_token : "";
 
-  if (!cell) return json({ error: "位置网格无效" }, 400);
+  if (!cell || cell.version !== 2) return json({ error: "位置网格无效" }, 400);
   if (body.profile_public !== true) return json({ error: "请确认公开信息授权" }, 400);
   if (deleteToken.length < 32 || deleteToken.length > 100) {
     return json({ error: "删除密钥无效" }, 400);
@@ -206,23 +207,36 @@ async function readSmallJson(request) {
 
 export function parseCellId(value) {
   if (typeof value !== "string") return null;
-  const match = value.match(/^(10|25):(-?\d+):(-?\d+)$/);
+  const match = value.match(/^(?:(v2):)?(10|25):(-?\d+):(-?\d+)$/);
   if (!match) return null;
-  const precisionKm = Number(match[1]);
-  const x = Number(match[2]);
-  const y = Number(match[3]);
+  const version = match[1] ? 2 : 1;
+  const precisionKm = Number(match[2]);
+  const x = Number(match[3]);
+  const y = Number(match[4]);
   if (!ALLOWED_PRECISIONS.has(precisionKm) || !Number.isSafeInteger(x) || !Number.isSafeInteger(y)) return null;
-  if (`${precisionKm}:${x}:${y}` !== value) return null;
+  const canonical = version === 2 ? `v2:${precisionKm}:${x}:${y}` : `${precisionKm}:${x}:${y}`;
+  if (canonical !== value) return null;
 
   const size = precisionKm * 1000;
+  if (version === 2) {
+    const centerLatRadians = (y + 0.5) * size / EARTH_RADIUS;
+    if (Math.abs(centerLatRadians) > MAX_LATITUDE * Math.PI / 180) return null;
+    const longitudeScale = EARTH_RADIUS * Math.cos(centerLatRadians);
+    const west = x * size / longitudeScale;
+    const east = (x + 1) * size / longitudeScale;
+    if (east < -Math.PI || west > Math.PI) return null;
+    return { version, precisionKm, x, y, size };
+  }
+
   const worldHalf = Math.PI * EARTH_RADIUS;
   if (Math.abs((x + 0.5) * size) > worldHalf || Math.abs((y + 0.5) * size) > worldHalf) return null;
-  return { precisionKm, x, y, size };
+  return { version, precisionKm, x, y, size };
 }
 
 export function cellCenter(cellId) {
   const cell = parseCellId(cellId);
   if (!cell) throw new Error("Invalid cell id");
+  if (cell.version === 2) return groundGridToLatLng(cell, 0.5, 0.5);
   return mercatorToLatLng((cell.x + 0.5) * cell.size, (cell.y + 0.5) * cell.size);
 }
 
@@ -244,9 +258,20 @@ export async function pointForCell(cellId, markerId, secret) {
   const view = new DataView(signature.buffer);
   const ratioX = view.getUint32(0) / 0xffffffff;
   const ratioY = view.getUint32(4) / 0xffffffff;
+  if (cell.version === 2) return groundGridToLatLng(cell, 0.15 + ratioX * 0.7, 0.15 + ratioY * 0.7);
   const x = (cell.x + 0.15 + ratioX * 0.7) * cell.size;
   const y = (cell.y + 0.15 + ratioY * 0.7) * cell.size;
   return mercatorToLatLng(x, y);
+}
+
+function groundGridToLatLng(cell, offsetX, offsetY) {
+  const centerLatRadians = (cell.y + 0.5) * cell.size / EARTH_RADIUS;
+  const latRadians = (cell.y + offsetY) * cell.size / EARTH_RADIUS;
+  const lngRadians = (cell.x + offsetX) * cell.size / (EARTH_RADIUS * Math.cos(centerLatRadians));
+  return {
+    lat: Math.max(-MAX_LATITUDE, Math.min(MAX_LATITUDE, latRadians * 180 / Math.PI)),
+    lng: ((lngRadians * 180 / Math.PI + 540) % 360) - 180
+  };
 }
 
 function mercatorToLatLng(x, y) {
